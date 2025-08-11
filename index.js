@@ -1,33 +1,36 @@
 const express = require('express');
-const multer = require('multer');
 const sharp = require('sharp');
+const axios = require('axios');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() }); // Lưu file vào RAM
 
-// API resize ảnh
-app.post('/resize', upload.single('image'), async (req, res) => {
+// API: /resize?url=LINK_ANH&width=300
+app.get('/resize', async (req, res) => {
     try {
-        const width = parseInt(req.query.width); // lấy width từ query
+        const imageUrl = req.query.url;
+        const width = parseInt(req.query.width);
+
+        if (!imageUrl) {
+            return res.status(400).send({ error: 'Thiếu tham số url' });
+        }
         if (!width || isNaN(width)) {
-            return res.status(400).send({ error: 'Vui lòng truyền width hợp lệ ?width=300' });
+            return res.status(400).send({ error: 'Thiếu hoặc width không hợp lệ' });
         }
 
-        if (!req.file) {
-            return res.status(400).send({ error: 'Vui lòng upload ảnh với field name = image' });
-        }
+        // Tải ảnh từ URL về dạng buffer
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(response.data, 'binary');
 
-        // Resize chỉ width, height sẽ tự động giữ tỉ lệ
-        const resizedImage = await sharp(req.file.buffer)
-            .resize({ width: width }) // Không set height => Sharp tự giữ tỉ lệ
+        // Resize chỉ width, height giữ nguyên tỉ lệ
+        const resizedImage = await sharp(imageBuffer)
+            .resize({ width })
             .toBuffer();
 
         res.set('Content-Type', 'image/jpeg');
         res.send(resizedImage);
-
     } catch (err) {
         console.error(err);
-        res.status(500).send({ error: 'Có lỗi xảy ra khi resize ảnh' });
+        res.status(500).send({ error: 'Không thể resize ảnh' });
     }
 });
 
