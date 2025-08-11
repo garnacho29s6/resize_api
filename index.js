@@ -8,7 +8,7 @@ const semaphore = new Semaphore(3); // Giới hạn 3 request đồng thời
 
 // API: /resize?url=LINK_ANH&width=300
 app.get('/resize', async (req, res) => {
-    const release = await semaphore.acquire(); // Đợi tới khi có slot trống
+    const [value, release] = await semaphore.acquire(); // Đúng cú pháp
     try {
         const imageUrl = req.query.url;
         const width = parseInt(req.query.width);
@@ -39,6 +39,7 @@ app.get('/resize', async (req, res) => {
         release(); // Trả slot cho request khác
     }
 });
+
 
 app.get("/", (req, res) => {
     res.send({"a": "b"})
